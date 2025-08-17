@@ -1,0 +1,188 @@
+{
+  "users": {
+    "6126373449": {
+      "user_id": 6126373449,
+      "first_name": "𝐆𝐨𝐣𝐨 𝐒𝐚𝐭𝐨𝐫𝐮࿐●",
+      "last_name": null,
+      "username": "Santit2020",
+      "language_code": "en",
+      "is_bot": false,
+      "first_seen": "2025-08-07T19:16:13.024577",
+      "last_seen": "2025-08-08T05:22:26.623647",
+      "message_count": 36
+    },
+    "943058397": {
+      "user_id": 943058397,
+      "first_name": "🫶🫶",
+      "last_name": ".",
+      "username": "Swar359",
+      "language_code": "en",
+      "is_bot": false,
+      "first_seen": "2025-08-07T19:30:52.474304",
+      "last_seen": "2025-08-07T20:51:22.431012",
+      "message_count": 30
+    },
+    "7504077948": {
+      "user_id": 7504077948,
+      "first_name": "𝙁𝙧𝙮𝙙𝙖𝙮 ☇␏",
+      "last_name": null,
+      "username": null,
+      "language_code": null,
+      "is_bot": false,
+      "first_seen": "2025-08-07T19:51:38.198735",
+      "last_seen": "2025-08-07T19:51:38.201795",
+      "message_count": 2
+    },
+    "1977706089": {
+      "user_id": 1977706089,
+      "first_name": "𝙇𝙖𝙨𝙩𝙇𝙞𝙛𝙚",
+      "last_name": null,
+      "username": "sidwiskers",
+      "language_code": "en",
+      "is_bot": false,
+      "first_seen": "2025-08-07T19:51:38.205152",
+      "last_seen": "2025-08-07T19:51:38.463020",
+      "message_count": 5
+    },
+    "7089614857": {
+      "user_id": 7089614857,
+      "first_name": "꧁❦Trustworthy☯࿐꧂",
+      "last_name": null,
+      "username": "Tyu03te",
+      "language_code": "en",
+      "is_bot": false,
+      "first_seen": "2025-08-07T19:53:39.688789",
+      "last_seen": "2025-08-07T19:53:39.688798",
+      "message_count": 1
+    },
+    "8226736221": {
+      "user_id": 8226736221,
+      "first_name": "◦•●◉✿ ᗰᎥᔕᔕ ᖇᎥᐯᗩ ✿◉●•◦",
+      "last_name": null,
+      "username": null,
+      "language_code": "en",
+      "is_bot": false,
+      "first_seen": "2025-08-07T20:20:31.483752",
+      "last_seen": "2025-08-08T05:10:56.831058",
+      "message_count": 27
+    },
+    "7296218188": {
+      "user_id": 7296218188,
+      "first_name": "Aylin🌹",
+      "last_name": null,
+      "username": "Ayli313",
+      "language_code": "fa",
+      "is_bot": false,
+      "first_seen": "2025-08-08T05:33:21.885377",
+      "last_seen": "2025-08-08T05:34:28.635609",
+      "message_count": 2
+    },
+    "5925396013": {
+      "user_id": 5925396013,
+      "first_name": "彡Ɗareͥ∂eͣvͫΐl彡",
+      "last_name": null,
+      "username": null,
+      "language_code": null,
+      "is_bot": false,
+      "first_seen": "2025-08-08T05:59:36.953648",
+      "last_seen": "2025-08-08T05:59:36.953654",
+      "message_count": 1
+    },
+    "7223736895": {
+      "user_id": 7223736895,
+      "first_name": "Aǫɪᴀ",
+      "last_name": null,
+      "username": "AqiaAss",
+      "language_code": null,
+      "is_bot": false,
+      "first_seen": "2025-08-08T06:00:03.482649",
+      "last_seen": "2025-08-08T06:00:03.482658",
+      "message_count": 1
+    }
+  },
+  "chats": {
+    "6126373449": {
+      "chat_id": 6126373449,
+      "chat_type": "private",
+      "title": null,
+      "username": "Santit2020",
+      "description": null,
+      "first_added": "2025-08-07T19:16:13.024592",
+      "last_activity": "2025-08-08T05:13:39.242374",
+      "is_active": true
+    },
+    "943058397": {
+      "chat_id": 943058397,
+      "chat_type": "private",
+      "title": null,
+      "username": "Swar359",
+      "description": null,
+      "first_added": "2025-08-07T19:30:52.474321",
+      "last_activity": "2025-08-07T20:51:22.431026",
+      "is_active": true
+    },
+    "-1002631337045": {
+      "chat_id": -1002631337045,
+      "chat_type": "supergroup",
+      "title": "Task 1",
+      "username": null,
+      "description": null,
+      "first_added": "2025-08-07T19:51:38.002488",
+      "last_activity": "2025-08-07T20:02:29.899551",
+      "is_active": true
+    },
+    "7089614857": {
+      "chat_id": 7089614857,
+      "chat_type": "private",
+      "title": null,
+      "username": "Tyu03te",
+      "description": null,
+      "first_added": "2025-08-07T19:53:39.688806",
+      "last_activity": "2025-08-07T19:53:39.688808",
+      "is_active": false,
+      "removed_date": "2025-08-07T20:05:59.148424"
+    },
+    "8226736221": {
+      "chat_id": 8226736221,
+      "chat_type": "private",
+      "title": null,
+      "username": null,
+      "description": null,
+      "first_added": "2025-08-07T20:20:31.483770",
+      "last_activity": "2025-08-08T05:10:56.831066",
+      "is_active": true
+    },
+    "-1002720698236": {
+      "chat_id": -1002720698236,
+      "chat_type": "supergroup",
+      "title": "𝐅ʟᴀᴡʟᴇꜱꜱ 🕊",
+      "username": "Flawless_u",
+      "description": null,
+      "first_added": "2025-08-08T05:22:26.623657",
+      "last_activity": "2025-08-08T06:00:03.482666",
+      "is_active": true
+    },
+    "7296218188": {
+      "chat_id": 7296218188,
+      "chat_type": "private",
+      "title": null,
+      "username": "Ayli313",
+      "description": null,
+      "first_added": "2025-08-08T05:33:21.885391",
+      "last_activity": "2025-08-08T05:34:28.635618",
+      "is_active": true
+    }
+  },
+  "user_activity": {
+    "6126373449": "2025-08-08T05:22:26.624197",
+    "943058397": "2025-08-07T20:51:22.433329",
+    "7504077948": "2025-08-07T19:51:38.202183",
+    "1977706089": "2025-08-07T19:51:38.463380",
+    "7089614857": "2025-08-07T19:53:39.690261",
+    "8226736221": "2025-08-08T05:10:56.831782",
+    "7296218188": "2025-08-08T05:34:28.636223",
+    "5925396013": "2025-08-08T05:59:36.954359",
+    "7223736895": "2025-08-08T06:00:03.483335"
+  },
+  "last_updated": "2025-08-08T06:00:03.483364"
+}
