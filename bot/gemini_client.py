@@ -58,7 +58,7 @@ class GeminiClient:
             # Generate content with enhanced configuration
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash-001",
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=enhanced_system_prompt,
