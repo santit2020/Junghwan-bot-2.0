@@ -35,8 +35,8 @@ def setup_handlers(
                 welcome_text = (
                     f"Hey {user_name}! 👋\n\n"
                     f"I'm {settings.BOT_NAME}, created by {settings.BOT_OWNER_NAME}. "
-                    f"I'm here to chat with you naturally - no robotic responses, just real conversation.\n\n"
-                    f"Feel free to talk to me about anything. I'll respond like a real person would. 😊"
+                    f"I'm here to chat with you.\n\n"
+                    f"Ask me anything, share your thoughts, or just chat—I’m here to make every conversation lively and real! 😊"
                 )
             else:
                 welcome_text = (
@@ -527,7 +527,7 @@ async def _should_respond_in_group(message: Message, settings: Settings) -> bool
                 return True
         
         # Flexible keyword detection for "Junghwan" - extract from any text
-        junghwan_keywords = ["junghwan", "jung", "hwan"]
+        junghwan_keywords = ["junghwan", "jung", "hwan", "jaan", "baby", "babu"]
         for keyword in junghwan_keywords:
             if keyword in message_text:
                 return True
@@ -538,7 +538,10 @@ async def _should_respond_in_group(message: Message, settings: Settings) -> bool
             "junghwan",
             "jung hwan", 
             "junghwanbot",
-            "jung"
+            "jung",
+            "jaan",
+            "baby", 
+            "babu"
         ]
         
         for variation in bot_name_variations:
