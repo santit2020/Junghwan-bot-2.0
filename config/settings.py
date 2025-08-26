@@ -49,7 +49,67 @@ class Settings:
         
         # Data Storage
         self.DATA_FILE = os.getenv("DATA_FILE", "user_data.json")
-        self.BACKUP_INTERVAL_HOURS = int(os.getenv("BACKUP_INTERVAL_HOURS", "24"))
+        self.BACKUP_INTERVAL_HOURS = int(os.getenv("BACKUP_INTERVAL_HOURS", "24")) 
+
+         # Database settings - PostgreSQL
+         database_url: str = Field(
+         default="MongoDB://localhost:5432/junghwan_bot",
+         alias="MongoDB_URL"))
+
+         # Rate limiting settings
+          rate_limit_requests_per_minute: int = Field(default=45, alias="RATE_LIMIT_RPM")
+           rate_limit_requests_per_hour: int = Field(default=1000, alias="RATE_LIMIT_RPH")
+           max_retries: int = Field(default=3, alias="MAX_RETRIES")) 
+
+        # Bot behavior settings
+        default_language: str = Field(default="english", alias="DEFAULT_LANGUAGE")
+        max_context_messages: int = Field(default=10, alias="MAX_CONTEXT_MESSAGES")
+        response_timeout: float = Field(default=30.0, alias="RESPONSE_TIMEOUT"))
+     
+        # Database cleanup settings
+        message_retention_days: int = Field(default=90, alias="MESSAGE_RETENTION_DAYS"))
+
+
+ # Development settings
+    debug_mode: bool = Field(default=False, alias="DEBUG_MODE")
+    
+    @field_validator('log_level')
+    @classmethod
+    def validate_log_level(cls, v):
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        if v.upper() not in valid_levels:
+            raise ValueError(f'Log level must be one of {valid_levels}')
+        return v.upper()
+    
+    @field_validator('command_prefix')
+    @classmethod
+    def validate_command_prefix(cls, v):
+        if not v or len(v) > 3:
+            raise ValueError('Command prefix must be 1-3 characters long')
+        return v
+    
+    @field_validator('rate_limit_requests_per_minute')
+    @classmethod
+    def validate_rpm(cls, v):
+        if v <= 0 or v > 60:
+            raise ValueError('Requests per minute must be between 1 and 60')
+        return v
+    
+    @field_validator('rate_limit_requests_per_hour')
+    @classmethod
+    def validate_rph(cls, v):
+        if v <= 0 or v > 10000:
+            raise ValueError('Requests per hour must be between 1 and 10000')
+        return v
+    
+    model_config = {
+        'env_file': '.env',
+        'env_file_encoding': 'utf-8',
+        'case_sensitive': False,
+        'populate_by_name': True,
+        'extra': 'ignore'
+    }
+
         
         # Security Settings
         self.ALLOWED_UPDATES = ["message", "callback_query", "chat_member"]
