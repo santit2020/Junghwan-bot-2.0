@@ -50,11 +50,6 @@ class Settings:
         # Data Storage
         self.DATA_FILE = os.getenv("DATA_FILE", "user_data.json")
         self.BACKUP_INTERVAL_HOURS = int(os.getenv("BACKUP_INTERVAL_HOURS", "24"))
-       
-        # Bot behavior settings
-         DEFAULT_LANGUAGE: str = Field(default="english")
-         RESPONSE_TIMEOUT: float = Field(default=30.0) 
-
         
         # Security Settings
         self.ALLOWED_UPDATES = ["message", "callback_query", "chat_member"]
