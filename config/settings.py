@@ -51,13 +51,11 @@ class Settings:
         self.DATA_FILE = os.getenv("DATA_FILE", "user_data.json")
         self.BACKUP_INTERVAL_HOURS = int(os.getenv("BACKUP_INTERVAL_HOURS", "24"))
        
-        # Database settings
-        MONGODB_URL: str = Field(default="mongodb://localhost:5432/junghwan_bot")
-
-         # Bot behavior settings
+        # Bot behavior settings
          DEFAULT_LANGUAGE: str = Field(default="english")
-         RESPONSE_TIMEOUT: float = Field(default=30.0)
-    
+         RESPONSE_TIMEOUT: float = Field(default=30.0) 
+
+        
         # Security Settings
         self.ALLOWED_UPDATES = ["message", "callback_query", "chat_member"]
         self.MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "20"))
