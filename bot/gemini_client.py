@@ -65,7 +65,7 @@ class GeminiClient:
                     temperature=0.9,  # Higher for more creative responses
                     top_p=0.95,
                     top_k=40,
-                    max_output_tokens=30000,  # Reduced for shorter responses
+                    max_output_tokens=2000,  # Reduced for shorter responses
                     candidate_count=1
                 )
             )
