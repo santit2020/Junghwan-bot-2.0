@@ -1,15 +1,11 @@
-# main.py — replace the entire file
-
 import asyncio
 import logging
 import os
 import sys
-import fcntl
 from aiohttp import web
 from bot.telegram_bot import TelegramBot
 from config.settings import Settings
 
-LOCK_FILE = "/tmp/junghwan_bot.lock"
 
 def setup_logging():
     log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
@@ -24,15 +20,6 @@ def setup_logging():
     logging.getLogger('aiogram').setLevel(logging.WARNING)
     logging.getLogger('aiohttp').setLevel(logging.WARNING)
 
-def acquire_lock():
-    """Prevent multiple bot instances from running at the same time."""
-    lock_fh = open(LOCK_FILE, 'w')
-    try:
-        fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except IOError:
-        logging.error("Another bot instance is already running! Exiting.")
-        sys.exit(1)
-    return lock_fh  # Keep reference so lock is held for process lifetime
 
 async def health_check(request):
     return web.json_response({
@@ -42,12 +29,14 @@ async def health_check(request):
         "timestamp": asyncio.get_event_loop().time()
     })
 
+
 async def bot_info(request):
     settings = Settings()
     return web.json_response({
         "bot_name": settings.BOT_NAME,
         "owner": settings.BOT_OWNER_NAME,
     })
+
 
 async def create_health_server():
     app = web.Application()
@@ -69,18 +58,22 @@ async def create_health_server():
             return runner
         raise
 
+
 async def main():
     setup_logging()
     logger = logging.getLogger(__name__)
-
-    # Acquire exclusive lock — crash immediately if another instance is running
-    lock_fh = acquire_lock()
 
     try:
         settings = Settings()
         settings.validate()
 
         logger.info("Starting Junghwan Telegram Bot v2.0")
+
+        # Wait so the previous instance fully releases Telegram polling
+        # before we connect — prevents TelegramConflictError on Render
+        logger.info("Waiting 8s for previous instance to shut down...")
+        await asyncio.sleep(8)
+
         health_runner = await create_health_server()
 
         bot = TelegramBot(settings)
@@ -91,11 +84,11 @@ async def main():
             raise
         finally:
             await health_runner.cleanup()
+
     except Exception as e:
         logger.error(f"Critical error during bot startup: {e}")
         sys.exit(1)
-    finally:
-        lock_fh.close()
+
 
 if __name__ == "__main__":
     try:
