@@ -216,6 +216,7 @@ class ConversationManager:
                             if not ctx.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS))
 
         total_messages = sum(len(ctx.messages) for ctx in self.contexts.values())
+        from .personality_responder import PersonalityResponder
 
         return {
             "total_contexts": total_contexts,
