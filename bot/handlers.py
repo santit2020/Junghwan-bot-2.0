@@ -474,32 +474,39 @@ def setup_handlers(
             except:
                 pass  # Don't fail if we can't send error message
     
-    @dp.chat_member()
-    async def handle_chat_member_update(update: ChatMemberUpdated):
-        """Handle bot being added/removed from groups."""
-        try:
-            if update.new_chat_member.user.id == (await dp.bot.get_me()).id:
-                if update.new_chat_member.status in ['member', 'administrator']:
-                    # Bot was added to group
-                    await user_manager.register_chat(update.chat)
-                    
-                    welcome_msg = (
-                        f"Hey everyone! 👋\n\n"
-                        f"Thanks for adding me to the group! I'm {settings.BOT_NAME}, "
-                        f"and I'm here to chat and have fun with you all.\n\n"
-                        f"Just mention me or reply to my messages to start a conversation! 😊"
-                    )
-                    
-                    await dp.bot.send_message(update.chat.id, welcome_msg)
-                    logger.info(f"Bot added to group: {update.chat.title} ({update.chat.id})")
-                
-                elif update.new_chat_member.status in ['left', 'kicked']:
-                    # Bot was removed
-                    await user_manager.remove_chat(update.chat.id)
-                    logger.info(f"Bot removed from group: {update.chat.title} ({update.chat.id})")
-        
-        except Exception as e:
-            logger.error(f"Error handling chat member update: {e}")
+  @dp.chat_member()
+async def handle_chat_member_update(update: ChatMemberUpdated):
+    """Handle bot being added/removed from groups."""
+    try:
+        bot_info = await update.bot.get_me()
+
+        if update.new_chat_member.user.id == bot_info.id:
+
+            if update.new_chat_member.status in ['member', 'administrator']:
+
+                # Bot was added to group
+                await user_manager.register_chat(update.chat)
+
+                welcome_msg = (
+                    f"Hey everyone! 👋\n\n"
+                    f"Thanks for adding me to the group! I'm {settings.BOT_NAME}, "
+                    f"and I'm here to chat and have fun with you all.\n\n"
+                    f"Just mention me or reply to my messages to start a conversation! 😊"
+                )
+
+                await update.bot.send_message(update.chat.id, welcome_msg)
+
+                logger.info(f"Bot added to group: {update.chat.title} ({update.chat.id})")
+
+            elif update.new_chat_member.status in ['left', 'kicked']:
+
+                # Bot was removed
+                await user_manager.remove_chat(update.chat.id)
+
+                logger.info(f"Bot removed from group: {update.chat.title} ({update.chat.id})")
+
+    except Exception as e:
+        logger.error(f"Error handling chat member update: {e}")
 
 async def _should_respond_in_group(message: Message, settings: Settings) -> bool:
     """Determine if bot should respond to a group message."""
