@@ -474,7 +474,7 @@ def setup_handlers(
             except:
                 pass  # Don't fail if we can't send error message
     
-  @dp.chat_member()
+    @dp.chat_member()
 async def handle_chat_member_update(update: ChatMemberUpdated):
     """Handle bot being added/removed from groups."""
     try:
