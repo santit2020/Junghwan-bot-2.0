@@ -58,14 +58,14 @@ class GeminiClient:
             # Generate content with enhanced configuration
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
-                model="gemini-2.0-flash-002",
+                model="gemini-2.0-flash",
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=enhanced_system_prompt,
                     temperature=0.9,  # Higher for more creative responses
                     top_p=0.95,
                     top_k=40,
-                    max_output_tokens=2000,  # Reduced for shorter responses
+                    max_output_tokens=1000,  # Reduced for shorter responses
                     candidate_count=1
                 )
             )
@@ -181,7 +181,7 @@ class GeminiClient:
         try:
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
-                model="gemini-2.0-flash-002",
+                model="gemini-2.0-flash",
                 contents="Hello, this is a test message.",
                 config=types.GenerateContentConfig(
                     max_output_tokens=50,
