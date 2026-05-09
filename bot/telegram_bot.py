@@ -100,3 +100,9 @@ class TelegramBot:
         except Exception as e:
             self.logger.error(f"Unexpected error sending message to {chat_id}: {e}")
             return False
+            # In telegram_bot.py — change line 71-73:
+await self.dp.start_polling(
+    self.bot,
+    allowed_updates=['message', 'callback_query', 'chat_member'],
+    drop_pending_updates=True   # ← ADD THIS LINE
+)
