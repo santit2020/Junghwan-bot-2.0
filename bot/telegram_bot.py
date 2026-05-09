@@ -16,26 +16,23 @@ from config.settings import Settings
 
 class TelegramBot:
     """Main Telegram bot class that orchestrates all components."""
-    
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.logger = logging.getLogger(__name__)
-        
-        # Initialize bot with enhanced properties
+
         default_properties = DefaultBotProperties(
             parse_mode=ParseMode.HTML,
             link_preview_is_disabled=True
         )
-        
+
         self.bot = Bot(
             token=settings.TELEGRAM_BOT_TOKEN,
             default=default_properties
         )
-        
+
         self.dp = Dispatcher()
-        
-        # Initialize core components
-        # In telegram_bot.py — change line 38:
+
         self.gemini_client = GeminiClient(settings.GEMINI_API_KEY, model=settings.GEMINI_MODEL)
         self.personality = PersonalityManager(settings)
         self.user_manager = UserManager()
@@ -49,8 +46,7 @@ class TelegramBot:
             user_manager=self.user_manager,
             owner_id=settings.BOT_OWNER_ID
         )
-        
-        # Setup handlers
+
         setup_handlers(
             dp=self.dp,
             conversation_manager=self.conversation_manager,
@@ -58,29 +54,28 @@ class TelegramBot:
             user_manager=self.user_manager,
             settings=settings
         )
-        
+
         self.logger.info("TelegramBot initialized successfully")
-    
+
     async def start_polling(self):
         """Start the bot with polling."""
         try:
-            # Get bot info and log
             bot_info = await self.bot.get_me()
             self.logger.info(f"Bot started: @{bot_info.username} ({bot_info.full_name})")
-            
-            # Start polling
+
             await self.dp.start_polling(
                 self.bot,
-                allowed_updates=['message', 'callback_query', 'chat_member']
+                allowed_updates=['message', 'callback_query', 'chat_member'],
+                drop_pending_updates=True
             )
-            
+
         except TelegramAPIError as e:
             self.logger.error(f"Telegram API error: {e}")
             raise
         except Exception as e:
             self.logger.error(f"Unexpected error during polling: {e}")
             raise
-    
+
     async def stop(self):
         """Gracefully stop the bot."""
         try:
@@ -89,7 +84,7 @@ class TelegramBot:
             self.logger.info("Bot stopped gracefully")
         except Exception as e:
             self.logger.error(f"Error stopping bot: {e}")
-    
+
     async def send_message_safe(self, chat_id: int, text: str, **kwargs) -> Optional[bool]:
         """Send message with error handling."""
         try:
@@ -101,9 +96,3 @@ class TelegramBot:
         except Exception as e:
             self.logger.error(f"Unexpected error sending message to {chat_id}: {e}")
             return False
-            # In telegram_bot.py — change line 71-73:
-await self.dp.start_polling(
-    self.bot,
-    allowed_updates=['message', 'callback_query', 'chat_member'],
-    drop_pending_updates=True   # ← ADD THIS LINE
-)
