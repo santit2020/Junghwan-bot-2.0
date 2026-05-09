@@ -31,7 +31,8 @@ class Settings:
         self.RATE_LIMIT_MESSAGES = int(os.getenv("RATE_LIMIT_MESSAGES", "999999"))
         
         # AI Model Settings
-        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-001")
+        # In config/settings.py — change line 34:
+        self.GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-lite")
         self.AI_TEMPERATURE = float(os.getenv("AI_TEMPERATURE", "0.9"))
         self.AI_TOP_P = float(os.getenv("AI_TOP_P", "0.95"))
         self.AI_TOP_K = int(os.getenv("AI_TOP_K", "40"))
