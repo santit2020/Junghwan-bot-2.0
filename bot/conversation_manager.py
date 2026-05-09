@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 import json
 
 from .gemini_client import GeminiClient
@@ -28,8 +28,7 @@ class ConversationContext:
             "timestamp": datetime.now().isoformat()
         })
 
-        # Keep only recent messages to prevent context overflow
-        if len(self.messages) > 20:  # Increased from 10 for better context
+        if len(self.messages) > 20:
             self.messages = self.messages[-20:]
 
         self.last_activity = datetime.now()
@@ -51,13 +50,8 @@ class ConversationManager:
         self.settings = settings
         self.logger = logging.getLogger(__name__)
 
-        # User contexts
         self.contexts: Dict[int, ConversationContext] = {}
 
-        # Rate limiting (disabled)
-        # self.rate_limits: Dict[int, List[datetime]] = {}
-
-        # Start cleanup task
         asyncio.create_task(self._cleanup_expired_contexts())
 
         self.logger.info("ConversationManager initialized")
@@ -66,7 +60,6 @@ class ConversationManager:
         """Get chat history for a specific user (owner only feature)."""
         if user_id in self.contexts:
             context = self.contexts[user_id]
-            # Return all messages with timestamps, limited by the specified amount
             messages = context.messages[-limit:] if limit else context.messages
             return [{
                 "role": msg["role"],
@@ -82,37 +75,26 @@ class ConversationManager:
         return list(self.contexts.keys())
 
     async def get_response(
-        self, 
-        message: str, 
-        user_id: int, 
+        self,
+        message: str,
+        user_id: int,
         chat_type: str = "private",
         user_name: str = None
     ) -> Optional[str]:
         """Get AI response for a message."""
         try:
-            # Rate limiting disabled for better user experience
-            # if not self._check_rate_limit(user_id):
-            #     self.logger.warning(f"Rate limit exceeded for user {user_id}")
-            #     return "Whoa, slow down there! Give me a sec to catch up. 😅"
-
-            # Get or create conversation context
             context = self._get_context(user_id)
 
-            # Detect language and tone
             language, tone = detect_language_and_tone(message)
             context.language = language
             context.tone = tone
 
-            # Add user message to context
             context.add_message("user", message)
 
-            # Create system prompt with personality
             system_prompt = self.personality.create_system_prompt(chat_type, user_name)
 
-            # Prepare conversation history
             conversation_history = self._prepare_conversation_history(context)
 
-            # Get AI response
             ai_response = await self.gemini_client.generate_response(
                 message=message,
                 system_prompt=system_prompt,
@@ -122,16 +104,11 @@ class ConversationManager:
             )
 
             if ai_response:
-                # Enhance response with personality
                 enhanced_response = self.personality.enhance_response(ai_response, user_name)
-
-                # Add AI response to context
                 context.add_message("assistant", enhanced_response)
-
                 self.logger.info(f"Generated response for user {user_id} in {language} ({tone} tone)")
                 return enhanced_response
             else:
-                # Fallback response
                 return self._get_fallback_response(tone, user_name)
 
         except Exception as e:
@@ -145,7 +122,6 @@ class ConversationManager:
 
         context = self.contexts[user_id]
 
-        # Reset context if expired
         if context.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS):
             self.logger.info(f"Resetting expired context for user {user_id}")
             self.contexts[user_id] = ConversationContext(user_id)
@@ -156,28 +132,13 @@ class ConversationManager:
     def _check_rate_limit(self, user_id: int) -> bool:
         """Rate limiting disabled - always allow messages."""
         return True
-        
-        # Original rate limiting code (commented out):
-        # now = datetime.now()
-        # minute_ago = now - timedelta(minutes=1)
-        # if user_id not in self.rate_limits:
-        #     self.rate_limits[user_id] = []
-        # self.rate_limits[user_id] = [
-        #     timestamp for timestamp in self.rate_limits[user_id] 
-        #     if timestamp > minute_ago
-        # ]
-        # if len(self.rate_limits[user_id]) >= self.settings.RATE_LIMIT_MESSAGES:
-        #     return False
-        # self.rate_limits[user_id].append(now)
-        # return True
 
     def _prepare_conversation_history(self, context: ConversationContext) -> List[Dict]:
         """Prepare conversation history for AI."""
         history = []
-        recent_messages = context.get_recent_context(8)  # Get last 8 messages
+        recent_messages = context.get_recent_context(8)
 
         for msg in recent_messages:
-            # Convert to format expected by Gemini
             role = "user" if msg["role"] == "user" else "model"
             history.append({
                 "role": role,
@@ -228,35 +189,30 @@ class ConversationManager:
 
         return response
 
-    # Change line 231-248 (_cleanup_expired_contexts method):
+    async def _cleanup_expired_contexts(self):
+        """Periodically clean up expired conversation contexts."""
+        while True:
+            try:
+                await asyncio.sleep(3600)
 
-async def _cleanup_expired_contexts(self):
-    """Periodically clean up expired conversation contexts."""
-    while True:
-        try:
-            await asyncio.sleep(3600)
+                expired_users = []
+                for user_id, context in self.contexts.items():
+                    if context.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS):
+                        expired_users.append(user_id)
 
-            expired_users = []
-            for user_id, context in self.contexts.items():
-                if context.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS):
-                    expired_users.append(user_id)
+                for user_id in expired_users:
+                    del self.contexts[user_id]
 
-            for user_id in expired_users:
-                del self.contexts[user_id]
-                # NOTE: rate_limits was removed — no longer referenced here
+                if expired_users:
+                    self.logger.info(f"Cleaned up {len(expired_users)} expired contexts")
 
-            if expired_users:
-                self.logger.info(f"Cleaned up {len(expired_users)} expired contexts")
-
-        except Exception as e:
-            self.logger.error(f"Error in context cleanup: {e}")
             except Exception as e:
                 self.logger.error(f"Error in context cleanup: {e}")
 
     def get_conversation_stats(self) -> Dict:
         """Get conversation statistics."""
         total_contexts = len(self.contexts)
-        active_contexts = sum(1 for ctx in self.contexts.values() 
+        active_contexts = sum(1 for ctx in self.contexts.values()
                             if not ctx.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS))
 
         total_messages = sum(len(ctx.messages) for ctx in self.contexts.values())
