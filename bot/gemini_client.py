@@ -42,7 +42,7 @@ class GeminiClient:
             
             # Add conversation history if available
             if conversation_history:
-                contents.extend(conversation_history)
+                contents.extend(conversation_history[-6:])
             
             # Add current message
             contents.append({
@@ -62,10 +62,10 @@ class GeminiClient:
                 contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=enhanced_system_prompt,
-                    temperature=0.9,  # Higher for more creative responses
+                    temperature=0.7,  # Higher for more creative responses
                     top_p=0.95,
                     top_k=40,
-                    max_output_tokens=1000,  # Reduced for shorter responses
+                    max_output_tokens=500,  # Reduced for shorter responses
                     candidate_count=1
                 )
             )
