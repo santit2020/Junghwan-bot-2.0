@@ -35,7 +35,8 @@ class TelegramBot:
         self.dp = Dispatcher()
         
         # Initialize core components
-        self.gemini_client = GeminiClient(settings.GEMINI_API_KEY)
+        # In telegram_bot.py — change line 38:
+        self.gemini_client = GeminiClient(settings.GEMINI_API_KEY, model=settings.GEMINI_MODEL)
         self.personality = PersonalityManager(settings)
         self.user_manager = UserManager()
         self.conversation_manager = ConversationManager(
