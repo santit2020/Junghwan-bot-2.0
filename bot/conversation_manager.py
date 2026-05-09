@@ -228,25 +228,28 @@ class ConversationManager:
 
         return response
 
-    async def _cleanup_expired_contexts(self):
-        """Periodically clean up expired conversation contexts."""
-        while True:
-            try:
-                await asyncio.sleep(3600)  # Run every hour
+    # Change line 231-248 (_cleanup_expired_contexts method):
 
-                expired_users = []
-                for user_id, context in self.contexts.items():
-                    if context.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS):
-                        expired_users.append(user_id)
+async def _cleanup_expired_contexts(self):
+    """Periodically clean up expired conversation contexts."""
+    while True:
+        try:
+            await asyncio.sleep(3600)
 
-                for user_id in expired_users:
-                    del self.contexts[user_id]
-                    if user_id in self.rate_limits:
-                        del self.rate_limits[user_id]
+            expired_users = []
+            for user_id, context in self.contexts.items():
+                if context.is_expired(self.settings.CONTEXT_TIMEOUT_HOURS):
+                    expired_users.append(user_id)
 
-                if expired_users:
-                    self.logger.info(f"Cleaned up {len(expired_users)} expired contexts")
+            for user_id in expired_users:
+                del self.contexts[user_id]
+                # NOTE: rate_limits was removed — no longer referenced here
 
+            if expired_users:
+                self.logger.info(f"Cleaned up {len(expired_users)} expired contexts")
+
+        except Exception as e:
+            self.logger.error(f"Error in context cleanup: {e}")
             except Exception as e:
                 self.logger.error(f"Error in context cleanup: {e}")
 
