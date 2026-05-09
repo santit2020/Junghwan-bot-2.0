@@ -6,16 +6,14 @@ from google.genai import types
 
 
 class GeminiClient:
-    """Client for interacting with Google Gemini AI."""
-
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash"):
         self.client = genai.Client(api_key=api_key)
         self.model = model
         self.logger = logging.getLogger(__name__)
 
         self._semaphore = asyncio.Semaphore(1)
         self._last_request_time: float = 0.0
-        self._min_request_gap: float = 3.0
+        self._min_request_gap: float = 4.0
 
         self.failure_count = 0
         self.max_failures = 8
@@ -42,8 +40,10 @@ class GeminiClient:
         contents.append({"role": "user", "parts": [{"text": message}]})
 
         language_instruction = (
-            f"\n\nCRITICAL: Respond in the SAME language the user wrote in. "
-            f"Detected language: '{language}'. This is mandatory. Keep it SHORT (1-2 sentences)."
+            f"\n\nCRITICAL: You MUST respond in the EXACT same language the user wrote in. "
+            f"Detected language code: '{language}'. "
+            f"If they wrote in Hindi, reply in Hindi. If Hinglish, reply in Hinglish. "
+            f"If English, reply in English. This is NON-NEGOTIABLE. Keep response SHORT (1-2 sentences)."
         )
         enhanced_system_prompt = system_prompt + language_instruction
 
@@ -77,14 +77,19 @@ class GeminiClient:
                     return self._clean_response(response.text.strip())
                 else:
                     self.logger.warning("Empty Gemini response")
-                    self._handle_failure()
                     return None
 
             except Exception as e:
                 error_str = str(e)
                 if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                    self.logger.warning("Gemini rate limit — falling back to local response")
+                    self.logger.warning("Gemini rate limit — using local personality response")
                     self._handle_failure()
+                    return None
+                elif "404" in error_str or "NOT_FOUND" in error_str:
+                    self.logger.error(
+                        f"Gemini model '{self.model}' not found. "
+                        "Check GEMINI_MODEL env var. Using local response."
+                    )
                     return None
                 else:
                     self.logger.error(f"Gemini error: {e}")
