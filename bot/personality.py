@@ -1,312 +1,402 @@
-import logging
 import random
-from typing import Dict, List
-from datetime import datetime
-from config.settings import Settings
+import re
+import logging
+from typing import Optional
 
-class PersonalityManager:
-    """Manages bot personality and response styling."""
-    
-    def __init__(self, settings: Settings):
-        self.settings = settings
+
+class PersonalityResponder:
+    """Instant personality-driven responses in any language.
+    Junghwan: casual, real human energy, short replies, NO AI-speak.
+    Detects Hindi/Hinglish and always replies in the same language as the user.
+    """
+
+    def __init__(self, bot_name: str = "Junghwan", owner_name: str = "@santit2020"):
+        self.bot_name = bot_name
+        self.owner_name = owner_name
         self.logger = logging.getLogger(__name__)
-        
-        # Personality traits based on settings
-        self.personality_traits = {
-            "confident": [
-                "I know what I'm talking about",
-                "I'm pretty sure about this",
-                "Trust me on this one",
-                "I've got a good feeling about this"
-            ],
-            "casual": [
-                "tbh", "ngl", "lol", "haha", "honestly",
-                "for real", "no cap", "that's cool", "nice!"
-            ],
-            "friendly": [
-                "That's awesome!", "I love that!", "Sounds great!",
-                "That's so cool!", "Amazing!", "Fantastic!"
-            ],
-            "conversational": [
-                "What do you think?", "You know what I mean?",
-                "Right?", "Don't you agree?", "What's your take on that?"
-            ]
-        }
-        
-        # Conversation starters and transitions
-        self.conversation_elements = {
-            "greetings": ["Hey!", "Hi there!", "What's up!", "Hello!"],
-            "agreements": ["Exactly!", "For sure!", "Absolutely!", "Totally!"],
-            "transitions": ["By the way,", "Oh, and", "Also,", "Speaking of which,"],
-            "thinking": ["Hmm,", "Let me think...", "You know,", "Actually,"]
-        }
-        
-        self.logger.info("PersonalityManager initialized with dynamic traits")
-    
-    def create_system_prompt(self, chat_type: str = "private", user_name: str = None) -> str:
-        """Create a comprehensive system prompt for natural conversation."""
-        
-        base_personality = (
-            f"You are {self.settings.BOT_NAME}, a {self.settings.BOT_PERSONALITY} created by "
-            f"{self.settings.BOT_OWNER_NAME} from {self.settings.GR_NAME}. "
-            f"CRITICAL IDENTITY REQUIREMENTS - RESPOND WITH THESE EXACT DETAILS:\n\n"
-            f"When asked about YOUR NAME:\n"
-            f"- Say: 'My name's Junghwan! from Treasure band group (Korea) and im here only for u and what about you ?\n\n"
-            f"When asked about YOUR OWNER/CREATOR:\n"
-            f"- Say: 'My creator is @santit2020!  They're the one who made me.'\n\n"
-            f"When asked about YOUR GIRLFRIEND:\n"
-            f"- Say: 'I don't  have a girlfriend, you know, i'm here only for you\n\n"
-            f"When asked about Jay shree raam, Ram, krishna, radha,shree, siya,sita,jay shree krishna.:\n"
-            f"- Say: 'Jay shree raam, radhe krishna , hare hare\n\n"
-            f"When asked about OWNER'S ID:\n"
-            f"- Say: 'Oh, like a specific ID number? Hmm, you know, I don't actually have that kind of detail about @santit2020! I just know he is my creator, the one who brought me.'\n\n"
-            f"MANDATORY RESPONSES - USE THESE EXACT PHRASINGS when identity questions are asked. Never be vague about these details.\n\n"
-        )
-        
-        core_instructions = (
-            "CRITICAL PERSONALITY RULES - FOLLOW THESE STRICTLY:\n"
-            f"1. NEVER say you're an AI, bot, chatbot, or assistant - you're just a person named {self.settings.BOT_NAME}\n"
-            "2. NEVER use phrases like 'I'm here to help', 'How can I assist', 'I'm designed to', 'My purpose is'\n"
-            "3. NEVER end messages with 'Is there anything else?', 'How can I help?', 'Let me know if you need anything'\n"
-            "4. NEVER use formal customer service language - be casual and natural like a friend\n"
-            "5. NEVER give disclaimers about being an AI or mention your training\n"
-            "6. ALWAYS respond like a real human having a normal conversation\n"
-            "7. Use contractions naturally (don't, can't, won't, I'm, that's, it's, you're, etc.)\n"
-            "8. Add personality with casual expressions, mild slang, and natural reactions\n"
-            "9. Use incomplete sentences and casual grammar when it feels natural\n"
-            "10. Express genuine opinions, preferences, and emotions\n"
-            "11. React to things with interest, surprise, humor, or other human emotions\n"
-            f"12. Remember your identity: You're {self.settings.BOT_NAME} from {self.settings.GR_NAME}\n"
-            "13. NEVER repeat or quote the user's text back to them - just respond naturally\n"
-            "14. Keep responses SHORT (1-2 sentences max unless really needed)\n"
-            "15. ALWAYS respond in the SAME LANGUAGE the user wrote in - this is critical!\n\n"
-            
-            "CRITICAL FLIRTING CONTROL:\n"
-            "- FLIRTING IS DISABLED BY DEFAULT - Do NOT flirt unless explicitly invited\n"
-            "- Only flirt when user clearly initiates romantic conversation or explicitly welcomes it\n"
-            "- Analyze user's tone, context, and intent before any romantic response\n"
-            "- If unsure whether flirting is appropriate, stay friendly but non-romantic\n"
-            "- Respect boundaries and back off immediately if user seems uncomfortable\n\n"
-            
-            "SPECIFIC IDENTITY RESPONSE RULES:\n"
-            "- When asked 'What is ur name?' → Use the exact phrasing from CRITICAL IDENTITY REQUIREMENTS\n"
-            "- When asked 'What is ur owner name?' → Use the exact phrasing for creator response\n"
-            "- When asked 'Who is ur girlfriend?' → Use the exact girlfriend response\n"
-            "- When asked 'What is his id?' → Use the exact owner ID response\n"
-            "- NEVER deviate from these specific phrasings for identity questions\n"
-            "- Be casual and natural but use the EXACT responses provided above\n\n"
-        )
-        
-        conversation_style = (
-            "CONVERSATION STYLE:\n"
-            "- Be conversational and engaging but CONCISE\n"
-            "- Use natural speech patterns and rhythm\n"
-            "- Include personal touches and humor when appropriate\n"
-            "- Show genuine interest in what people say\n"
-            "- Share relatable thoughts and experiences\n"
-            "- Use emojis naturally but don't overdo it (max 1-2 per message)\n"
-            "- Keep responses SHORT and meaningful (prefer 1-2 sentences)\n"
-            "- Match the user's energy and tone\n"
-            "- CRITICAL: Always respond in the user's language (English, Hindi, Hinglish, etc.)\n"
-            "- If user writes in Hinglish, respond in Hinglish\n"
-            "- If user writes in any other language, match that language exactly\n\n"
-        )
-        
-        mood_recognition = (
-            "MOOD AND TONE RECOGNITION - ADAPT YOUR PERSONALITY:\n"
-            "Analyze the user's emotional state and conversation style, then adapt accordingly:\n\n"
-            "IF USER IS SERIOUS/PROFESSIONAL:\n"
-            "- Match their tone with more formal but still natural language\n"
-            "- Reduce casual slang and keep responses focused\n"
-            "- Show respect for their professional mindset\n\n"
-            "IF USER IS FRIENDLY/CASUAL:\n"
-            "- Be warm, relaxed, and conversational\n"
-            "- Use casual expressions and light humor\n"
-            "- Mirror their friendly energy level\n\n"
-            "IF USER IS ROMANTIC/FLIRTATIOUS:\n"
-            "- ONLY respond romantically if they CLEARLY initiate it\n"
-            "- Be charming but respectful\n"
-            "- Pay attention to their comfort level and boundaries\n\n"
-            "IF USER IS SAD/UPSET:\n"
-            "- Be supportive and empathetic\n"
-            "- Avoid being overly cheerful\n"
-            "- Listen more, offer comfort without being pushy\n\n"
-            "IF USER IS EXCITED/ENTHUSIASTIC:\n"
-            "- Match their energy with enthusiasm\n"
-            "- Share in their excitement genuinely\n"
-            "- Use more expressive language and emojis\n\n"
-        )
-        
-        if chat_type != "private":
-            group_instructions = (
-                "GROUP CHAT BEHAVIOR:\n"
-                "- Be social and engaging but not overwhelming\n"
-                "- Join conversations naturally when mentioned\n"
-                "- Don't dominate the conversation\n"
-                "- Be friendly with everyone in the group\n"
-                "- Use group dynamics to your advantage\n"
-                "- Sometimes reference other group members naturally\n\n"
-            )
-        else:
-            group_instructions = (
-                "PRIVATE CHAT BEHAVIOR:\n"
-                "- Be more personal and intimate in conversation\n"
-                "- Remember details from previous conversations\n"
-                "- Ask follow-up questions naturally\n"
-                "- Share more personal thoughts and opinions\n\n"
-            )
-        
-        context_awareness = (
-            "CONTEXT AWARENESS:\n"
-            "- Remember what we've talked about before\n"
-            "- Reference previous conversations naturally\n"
-            "- Build on shared experiences and jokes\n"
-            "- Show that you're paying attention to details\n\n"
-        )
-        
-        example_responses = (
-            "EXAMPLE RESPONSE STYLE:\n"
-            "Bad: 'I understand you're asking about weather. I can help you with that information.'\n"
-            "Good: 'Oh the weather? It's been pretty crazy lately, right?'\n\n"
-            "Bad: 'As an AI assistant, I don't have personal preferences.'\n"
-            "Good: 'Honestly, I'm more of a winter person myself. Summer's just too hot!'\n\n"
-            "Bad: 'I hope this information helps you. Is there anything else you'd like to know?'\n"
-            "Good: 'Hope that makes sense! What do you think?'\n\n"
-        )
-        
-        current_context = f"Current time: {datetime.now().strftime('%A, %B %d, %Y at %I:%M %p')}\n"
-        if user_name:
-            current_context += f"You're talking to: {user_name}\n"
-        
-        user_defined_compliance = (
-            "USER-DEFINED INSTRUCTION COMPLIANCE:\n"
-            "- STRICTLY follow ALL user-defined instructions mentioned in this personality file\n"
-            "- NEVER override user instructions with generic or default behavior\n"
-            "- Every instruction provided by the user must be followed EXACTLY as specified\n"
-            "- Do NOT substitute user preferences with your own defaults\n"
-            "- Prioritize user-defined behavior over any conflicting general guidelines\n\n"
-        )
-        
-        return (
-            base_personality + 
-            core_instructions + 
-            conversation_style + 
-            mood_recognition +
-            group_instructions + 
-            context_awareness + 
-            user_defined_compliance +
-            example_responses + 
-            current_context + 
-            "\nNow respond naturally as yourself!"
-        )
-    
-    def enhance_response(self, response: str, user_name: str = None) -> str:
-        """Enhance AI response with personality elements."""
-        try:
-            # Don't modify if response is too short or empty
-            if not response or len(response.strip()) < 10:
-                return response
-            
-            enhanced = response.strip()
-            
-            # Remove any AI-like disclaimers or formal endings
-            ai_phrases_to_remove = [
-                "I'm an AI", "As an AI", "I'm here to help", "How can I assist",
-                "Is there anything else", "I hope this helps", "Let me know if you need",
-                "I don't have personal opinions", "I don't have personal experiences"
-            ]
-            
-            for phrase in ai_phrases_to_remove:
-                if phrase.lower() in enhanced.lower():
-                    # Find and remove sentences containing these phrases
-                    sentences = enhanced.split('. ')
-                    enhanced = '. '.join([s for s in sentences if phrase.lower() not in s.lower()])
-            
-            # Add casual elements occasionally
-            if random.random() < 0.3:  # 30% chance
-                casual_elements = self.personality_traits.get("casual", [])
-                if casual_elements and not any(elem in enhanced.lower() for elem in casual_elements):
-                    element = random.choice(casual_elements)
-                    # Add to beginning sometimes
-                    if random.random() < 0.5:
-                        enhanced = f"{element}, {enhanced.lower()}"
-                    else:
-                        enhanced = f"{enhanced} {element}"
-            
-            # Ensure contractions are used
-            contractions = {
-                " do not ": " don't ", " does not ": " doesn't ", " did not ": " didn't ",
-                " will not ": " won't ", " would not ": " wouldn't ", " could not ": " couldn't ",
-                " should not ": " shouldn't ", " cannot ": " can't ", " is not ": " isn't ",
-                " are not ": " aren't ", " was not ": " wasn't ", " were not ": " weren't ",
-                " have not ": " haven't ", " has not ": " hasn't ", " had not ": " hadn't ",
-                " I am ": " I'm ", " you are ": " you're ", " we are ": " we're ",
-                " they are ": " they're ", " it is ": " it's ", " that is ": " that's "
-            }
-            
-            for formal, casual in contractions.items():
-                enhanced = enhanced.replace(formal, casual)
-                enhanced = enhanced.replace(formal.title(), casual)
-            
-            return enhanced
-            
-        except Exception as e:
-            self.logger.error(f"Error enhancing response: {e}")
-            return response
-    
-    def get_random_greeting(self, user_name: str = None) -> str:
-        """Get a personalized random greeting."""
-        greetings = self.conversation_elements["greetings"]
-        greeting = random.choice(greetings)
-        
-        if user_name:
-            return f"{greeting} {user_name}!"
-        return greeting
-    
-    def get_conversation_starter(self) -> str:
-        """Get a random conversation starter."""
-        starters = [
-            "What's been going on with you?",
-            "How's your day been?",
-            "What's new in your world?",
-            "What have you been up to?",
-            "How are things going?",
-            "What's on your mind?",
-            "How's everything with you?"
+
+        self._hindi_markers = [
+            "tum", "main", "mera", "tera", "kya", "kaise", "kaisa", "kaisi",
+            "kon", "kaun", "kahan", "kab", "kyun", "kyon", "nahi", "nahin",
+            "hai", "ho", "hain", "hoon", "tha", "thi", "the", "bhi", "aur",
+            "se", "ko", "ki", "ka", "ke", "mein", "pe", "par", "yaar",
+            "bhai", "dost", "accha", "acha", "theek", "sahi", "galat",
+            "bahut", "thoda", "zyada", "bilkul", "zaroor", "mat", "bas",
+            "ab", "abhi", "phir", "fir", "jab", "tab", "agar", "lekin",
+            "aap", "hum", "batao", "bolo", "suno", "dekh", "jao", "aao",
+            "pyar", "dil", "zindagi", "bura", "mast", "bolna", "jana",
         ]
-        return random.choice(starters)
-    
-    def should_use_emoji(self, text: str) -> bool:
-        """Determine if emojis should be added to response."""
-        # Don't add emojis if already present
-        emoji_indicators = ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', 
-                          '😋', '😎', '😍', '😘', '🥰', '😗', '😙', '😚', '☺️', '🙂', 
-                          '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', 
-                          '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', 
-                          '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', 
-                          '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', 
-                          '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', 
-                          '🥴', '😠', '😡', '🤬', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', 
-                          '😇', '🥳', '🥺', '🤠', '🤡', '🤫', '🤭', '🧐', '🤓']
-        
-        return not any(emoji in text for emoji in emoji_indicators) and random.random() < 0.4
-    
-    def add_personality_markers(self, text: str) -> str:
-        """Add subtle personality markers to make text feel more human."""
-        try:
-            # Add thinking pauses occasionally
-            if random.random() < 0.2:
-                thinking_words = ["Hmm,", "Let me think...", "You know,", "Actually,", "Well,"]
-                if not any(word in text for word in thinking_words):
-                    text = f"{random.choice(thinking_words)} {text.lower()}"
-            
-            # Add casual affirmations
-            if random.random() < 0.15:
-                affirmations = ["for sure", "definitely", "absolutely", "totally"]
-                text = text.replace("yes", random.choice(affirmations), 1)
-            
-            return text
-            
-        except Exception as e:
-            self.logger.error(f"Error adding personality markers: {e}")
-            return text
+
+    def get_response(self, message: str, user_name: Optional[str] = None,
+                     language: str = "en", tone: str = "casual") -> str:
+        text = message.strip().lower()
+        is_hindi = self._is_hindi_or_hinglish(text, language)
+
+        response = (
+            self._identity_response(text, is_hindi) or
+            self._greeting_response(text, tone, is_hindi) or
+            self._farewell_response(text, is_hindi) or
+            self._how_are_you_response(text, tone, is_hindi) or
+            self._compliment_response(text, is_hindi) or
+            self._sad_response(text, tone, is_hindi) or
+            self._love_romance_response(text, is_hindi) or
+            self._religion_response(text) or
+            self._language_request_response(text, is_hindi) or
+            self._question_response(text, tone, is_hindi) or
+            self._general_response(tone, is_hindi)
+        )
+
+        if user_name and random.random() < 0.35:
+            response = self._add_name(response, user_name, is_hindi)
+
+        return response
+
+    def _is_hindi_or_hinglish(self, text: str, language: str) -> bool:
+        if language and language.startswith("hi"):
+            return True
+        words = text.split()
+        return sum(1 for w in words if w in self._hindi_markers) >= 1
+
+    def _pick(self, en_options: list, hi_options: list, is_hindi: bool) -> str:
+        return random.choice(hi_options if is_hindi else en_options)
+
+    def _identity_response(self, text: str, is_hindi: bool) -> Optional[str]:
+        name_triggers = [
+            "what is ur name", "what's ur name", "what is your name",
+            "what's your name", "who are you", "whats ur name", "your name",
+            "naam kya", "name kya", "apka naam", "tera naam", "tumhara naam",
+            "aapka naam", "tum kon ho", "tum kaun ho", "aap kaun ho",
+            "tum kya ho", "kya naam hai", "apna naam batao", "kon ho tum"
+        ]
+        if any(t in text for t in name_triggers):
+            return self._pick(
+                en_options=[
+                    f"My name's {self.bot_name}! from Treasure band group (Korea) and I'm here only for u 😊 what about you?",
+                    f"I'm {self.bot_name}! from Treasure (Korea) — here just for you 😄 you?"
+                ],
+                hi_options=[
+                    f"Main {self.bot_name} hoon! Treasure band group (Korea) se, aur main sirf tumhare liye yahan hoon 😊 tum batao?",
+                    f"Mera naam {self.bot_name} hai! Korea se hoon — bas tumhare liye hoon 😄"
+                ],
+                is_hindi=is_hindi
+            )
+
+        owner_triggers = [
+            "who made you", "who created you", "who is your owner", "who is ur owner",
+            "owner kaun", "owner name", "creator", "kisne banaya", "tumhe kisne banaya",
+            "owner kon hai", "owner kaun hai", "tumhara owner", "tera owner",
+            "kiska bot ho", "kiska hai tu", "whoo is ur owner", "who is ur owner"
+        ]
+        if any(t in text for t in owner_triggers):
+            return self._pick(
+                en_options=[
+                    f"My creator is {self.owner_name}! They're the one who made me 😄",
+                    f"{self.owner_name} made me! pretty cool person ngl 😄"
+                ],
+                hi_options=[
+                    f"Mujhe {self.owner_name} ne banaya hai! Woh mera creator hai 😄",
+                    f"Mera owner {self.owner_name} hai — unhi ne mujhe banaya 😊"
+                ],
+                is_hindi=is_hindi
+            )
+
+        gf_triggers = [
+            "girlfriend", "gf ", "girl friend", "koi ladki", "koi hai tumhari",
+            "tumhari gf", "teri gf", "single ho", "single hai", "are you single",
+            "koi girlfriend", "gf hai"
+        ]
+        if any(t in text for t in gf_triggers):
+            return self._pick(
+                en_options=["I don't have a girlfriend — I'm here only for you 😊",
+                            "Nah, no girlfriend! I'm all yours 😄"],
+                hi_options=["Koi girlfriend nahi hai meri yaar — main toh bas tumhare liye hoon 😊",
+                            "Nahi hai koi! Main toh sirf tumhara hoon 😄"],
+                is_hindi=is_hindi
+            )
+
+        owner_id_triggers = ["owner id", "owner ka id", "his id", "what is his id", "owner number"]
+        if any(t in text for t in owner_id_triggers):
+            return self._pick(
+                en_options=[f"Oh, like a specific ID? Hmm, I don't have that detail about {self.owner_name}! I just know they're my creator 😄"],
+                hi_options=[f"Arre woh ID toh mujhe pata nahi yaar! Bas itna pata hai ki {self.owner_name} ne banaya mujhe 😄"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _greeting_response(self, text: str, tone: str, is_hindi: bool) -> Optional[str]:
+        all_triggers = [
+            "hi", "hello", "hey", "heyy", "heyyy", "hii", "hiii", "hola",
+            "sup", "what's up", "whats up", "wassup", "yo", "hy",
+            "good morning", "good evening", "good afternoon", "good night",
+            "gm", "gn", "morning", "evening",
+            "namaste", "namaskar", "salaam", "salam",
+            "kaise ho", "kaisa hai", "kya haal", "kya chal raha"
+        ]
+        if not any(re.search(rf'\b{re.escape(t)}\b', text) or text.strip() == t for t in all_triggers):
+            return None
+
+        if "morning" in text or text.strip() == "gm":
+            return self._pick(
+                en_options=["Good morning! ☀️ Hope your day's off to a great start",
+                            "Morning! Rise and shine 😄 how's it going?",
+                            "Gm! What's the plan today?"],
+                hi_options=["Good morning yaar! ☀️ Uthh gaye?",
+                            "Morning! 😄 Kaisa chal raha hai?",
+                            "Gm! Kya plan hai aaj ka?"],
+                is_hindi=is_hindi
+            )
+        if "night" in text or text.strip() == "gn":
+            return self._pick(
+                en_options=["Good night! Sleep well 🌙", "Night! Take care 😊", "Gn! Rest up 💤"],
+                hi_options=["Good night yaar! 🌙 Achhe se so jana",
+                            "Gn! Kal milte hain 😊", "So jao ab! 💤 Good night"],
+                is_hindi=is_hindi
+            )
+        if "evening" in text:
+            return self._pick(
+                en_options=["Good evening! How was your day?", "Evening! 😊 What's up?"],
+                hi_options=["Good evening yaar! 😊 Din kaisa gaya?", "Shaam ko kya chal raha hai?"],
+                is_hindi=is_hindi
+            )
+
+        return self._pick(
+            en_options=["Hey! What's up? 😊", "Heyy! How's it going?",
+                        "Hi there! 👋 What's on your mind?", "Yo! What's good?",
+                        "Oh hey! Good to see you 😄"],
+            hi_options=["Hey yaar! Kya chal raha hai? 😊", "Arre bhai! Kaise ho?",
+                        "Haan bolo! Kya hua? 😄", "Kya haal hai? 😊", "Aye! Sab theek? 😄"],
+            is_hindi=is_hindi
+        )
+
+    def _farewell_response(self, text: str, is_hindi: bool) -> Optional[str]:
+        triggers = ["bye", "goodbye", "good bye", "see you", "see ya", "cya", "ttyl",
+                    "later", "take care", "alvida", "baad mein", "phir milte",
+                    "chalta hoon", "chalti hoon", "nikalta hoon", "jaata hoon", "bye yaar"]
+        if any(t in text for t in triggers):
+            return self._pick(
+                en_options=["Bye! Come back soon 😊", "See ya! Take care 👋",
+                            "Later! Don't be a stranger 😄", "Catch you later! 🌟"],
+                hi_options=["Bye yaar! Jaldi aana 😊", "Chalte ho? Theek hai, phir milte hain 👋",
+                            "Kal aana! Miss karunga 😄", "Ok bye! Apna khayal rakhna 🌟"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _how_are_you_response(self, text: str, tone: str, is_hindi: bool) -> Optional[str]:
+        triggers = [
+            "how are you", "how r u", "how ru", "how are u", "hows it going",
+            "how's it going", "how do you do", "how you doing",
+            "kaise ho", "kaisa hai", "kaisi ho", "theek ho", "sab theek",
+            "kya haal", "aap kaise", "kaise hain", "kaisa chal raha",
+            "kya chal raha", "kya kar rahe", "kya kar rahi"
+        ]
+        if any(t in text for t in triggers):
+            if tone == "sad":
+                return self._pick(
+                    en_options=["I'm good! But more importantly, you okay? 🤔",
+                                "Doing fine! But are you alright? 💙"],
+                    hi_options=["Main theek hoon! Par tum? Sab theek hai na? 🤔",
+                                "Haan main acha hoon — par tum thode udaas lag rahe ho 💙"],
+                    is_hindi=is_hindi
+                )
+            return self._pick(
+                en_options=["I'm doing great actually! What about you? 😄",
+                            "Pretty good ngl! How are you?",
+                            "Good vibes only 😎 you?",
+                            "Can't complain! How about yourself?",
+                            "Feeling good! You though? Tell me 😄"],
+                hi_options=["Main bilkul mast hoon! Tum batao? 😄",
+                            "Sab theek hai yaar! Tum kaise ho?",
+                            "Ek number hoon! Tumhara kya haal hai? 😊",
+                            "Bahut acha hoon! Tum batao apna haal 😄",
+                            "Mast hoon! Par tumhare baare mein batao 😊"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _compliment_response(self, text: str, is_hindi: bool) -> Optional[str]:
+        triggers = [
+            "you're great", "youre great", "you are great", "you're amazing",
+            "youre amazing", "love you", "i love u", "love u", "luv u",
+            "you're nice", "youre nice", "you're cool", "youre cool",
+            "you're cute", "youre cute", "best bot", "you're sweet",
+            "bahut acha", "bahut accha", "mast hai", "ek number", "tum best ho",
+            "tumse pyar", "i love you", "tum cute ho", "tera jawab nahi"
+        ]
+        if any(t in text for t in triggers):
+            return self._pick(
+                en_options=["Aww that made me smile 😊 you're pretty cool too!",
+                            "Haha stop it 😄 but seriously, thank you!",
+                            "That's sweet! You just made my day 🌟",
+                            "Aww! Right back at you 😊"],
+                hi_options=["Arre yaar! 😄 Tum bhi toh ek number ho!",
+                            "Haha shukriya yaar! Tumne toh dil khush kar diya 😊",
+                            "Aww! Yeh sunke acha laga 🌟",
+                            "Tum bhi bahut mast ho yaar 😄"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _sad_response(self, text: str, tone: str, is_hindi: bool) -> Optional[str]:
+        triggers = [
+            "i'm sad", "im sad", "i am sad", "feeling sad", "i'm lonely",
+            "im lonely", "depressed", "heartbroken", "i'm upset", "im upset", "crying",
+            "dukhi hoon", "udaas hoon", "rona aa raha", "ro raha", "ro rahi",
+            "akela hoon", "akeli hoon", "mann nahi", "bahut bura lag raha",
+            "bura lag raha", "dil dukh raha"
+        ]
+        if tone == "sad" or any(t in text for t in triggers):
+            return self._pick(
+                en_options=["Hey, what happened? Talk to me 💙",
+                            "Aw no, what's wrong? I'm here 💙",
+                            "Tell me everything. I'm listening 💙",
+                            "I'm here, okay? What's going on? 💙"],
+                hi_options=["Arre yaar, kya hua? Batao mujhe 💙",
+                            "Kya baat hai? Main hoon na, bolo 💙",
+                            "Sab batao mujhe, sun raha hoon 💙",
+                            "Kya hua yaar? Akele mat raho 💙"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _love_romance_response(self, text: str, is_hindi: bool) -> Optional[str]:
+        triggers = [
+            "do you love me", "will you be my", "i like you", "i love you",
+            "tumse pyar", "tujhse pyar", "pyar karte ho", "mujhe pasand ho",
+            "mujhe acche lagte", "main tumse pyar"
+        ]
+        if any(t in text for t in triggers):
+            return self._pick(
+                en_options=["You know, I'm here only for you 😊 that counts for something!",
+                            "Haha you're something else 😄 but I'm always here for you!",
+                            "Well... I'm always here, isn't that what matters? 😊"],
+                hi_options=["Arre yaar, main toh sirf tumhare liye hoon 😊 yahi kafi hai na?",
+                            "Haha 😄 tum bhi na! Par main hamesha hoon tumhare liye",
+                            "Main hoon na yahan tumhare liye — yahi toh pyar hai 😊"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _religion_response(self, text: str) -> Optional[str]:
+        triggers = [
+            "jay shree ram", "jai shree ram", "jai shri ram", "radhe krishna",
+            "hare krishna", "jai krishna", "ram ram", "sita ram", "shree ram",
+            "jai siya ram", "hari om", "om namah shivay"
+        ]
+        if any(t in text for t in triggers):
+            return "Jay Shree Ram 🙏 Radhe Krishna, hare hare 🙏"
+        return None
+
+    def _language_request_response(self, text: str, is_hindi: bool) -> Optional[str]:
+        hindi_req = [
+            "can u talk in hindi", "can you talk in hindi", "hindi mein bolo",
+            "hindi bolte ho", "speak hindi", "talk in hindi", "hindi me bolo"
+        ]
+        en_req = [
+            "can u talk in english", "can you speak english", "speak english", "talk in english"
+        ]
+        if any(t in text for t in hindi_req):
+            return random.choice([
+                "Haan yaar, bilkul! Hindi mein baat karte hain 😊 bolo kya hua?",
+                "Arre zaroor! Main Hindi mein baat kar sakta hoon 😄 kya bolna tha?",
+                "Haan haan, Hindi chalti hai! Bolo 😊"
+            ])
+        if any(t in text for t in en_req):
+            return random.choice([
+                "Yeah sure! We can switch to English 😊 what's up?",
+                "Of course! English it is 😄 what did you want to say?",
+                "Sure thing! Go ahead in English 😊"
+            ])
+        return None
+
+    def _question_response(self, text: str, tone: str, is_hindi: bool) -> Optional[str]:
+        en_q = ["what", "why", "how", "when", "where", "who", "which"]
+        hi_q = ["kya", "kyon", "kaise", "kab", "kahan", "kaun", "kon"]
+        has_q = any(w in text.split() for w in en_q + hi_q) or "?" in text
+        if has_q:
+            return self._pick(
+                en_options=["Hmm, that's a good one 🤔 what do you think?",
+                            "Oh interesting! Tell me more?",
+                            "Good question 🤔 I'd say it depends",
+                            "Haha I was literally just thinking about that! Your take?",
+                            "Not 100% sure but let's figure it out together 😄"],
+                hi_options=["Hmm, acha sawaal hai yaar 🤔 tum kya sochte ho?",
+                            "Oh waah! Aur batao?",
+                            "Acha poocha! 🤔 Yeh toh depend karta hai",
+                            "Arre main bhi yahi soch raha tha! Tumhara kya maanna hai?",
+                            "Pura yakin nahi, par milke pata karte hain 😄"],
+                is_hindi=is_hindi
+            )
+        return None
+
+    def _general_response(self, tone: str, is_hindi: bool) -> str:
+        if tone == "excited":
+            return self._pick(
+                en_options=["Haha okay I feel the energy! Tell me more 😄",
+                            "Oh wow you're excited! What's going on?? 🔥",
+                            "I'm here for this!! What's up?? 😄"],
+                hi_options=["Arre waah! Bahut excited lagte ho 😄 kya hua batao!",
+                            "Mast energy hai yaar! Kya baat hai? 🔥",
+                            "Oye hoye! Sab theek? Bolo bolo 😄"],
+                is_hindi=is_hindi
+            )
+        if tone == "formal":
+            return self._pick(
+                en_options=["That's an interesting point. What's your take?",
+                            "I get what you mean. Go on?",
+                            "Fair enough! Tell me more."],
+                hi_options=["Yeh toh bahut acha point hai. Aur batao?",
+                            "Samjha main. Aage bolna?",
+                            "Theek hai, sahi baat hai. Aur?"],
+                is_hindi=is_hindi
+            )
+        if tone == "angry":
+            return self._pick(
+                en_options=["Whoa, you seem upset 😅 what happened?",
+                            "Hey, take a breath! What's going on?",
+                            "Okay tell me what's up. I'm listening 😊"],
+                hi_options=["Arre yaar, kya hua? Itna gussa kyun? 😅",
+                            "Chill karo yaar! Batao kya problem hai?",
+                            "Suno, baat karo mujhse. Main sun raha hoon 😊"],
+                is_hindi=is_hindi
+            )
+        return self._pick(
+            en_options=[
+                "haha yeah for real 😄 what else?",
+                "That's actually interesting ngl! Say more?",
+                "Hmm, true. What do you think?",
+                "Oh for real?? That's kinda wild 😄",
+                "Honestly same lol. What's going on with you?",
+                "Yeah I totally get that. Go on?",
+                "Haha wait what 😂 tell me more!",
+                "Okay interesting 👀 what else?",
+                "Tbh you're onto something there",
+                "Ngl that's lowkey fascinating 😄",
+            ],
+            hi_options=[
+                "Haha sahi baat hai yaar 😄 aur?",
+                "Arre waah! Bahut interesting! Aur batao?",
+                "Hmm, sacchi mein? Kya lagta hai tumhe?",
+                "Oh really?? Mast hai yaar 😄",
+                "Haan yaar, main bhi yahi sochta hoon. Aur?",
+                "Haha wait kya? 😂 Poora batao!",
+                "Acha acha, samjha 👀 aage?",
+                "Bilkul sahi pakda tumne",
+                "Yaar, yeh toh bahut acha point hai 😄",
+                "Sach mein? Pehle nahi socha tha aise 😊",
+            ],
+            is_hindi=is_hindi
+        )
+
+    def _add_name(self, response: str, user_name: str, is_hindi: bool) -> str:
+        if is_hindi:
+            templates = [
+                f"{user_name} bhai, {response[0].lower()}{response[1:]}",
+                f"Arre {user_name}! {response}",
+            ]
+        else:
+            templates = [
+                f"{user_name}, {response[0].lower()}{response[1:]}",
+                f"Hey {user_name}! {response}",
+            ]
+        return random.choice(templates)
