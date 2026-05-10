@@ -11,14 +11,17 @@ class GeminiClient:
         self.model = model
         self.logger = logging.getLogger(__name__)
 
-        self._semaphore = asyncio.Semaphore(1)
+        # Allow 3 concurrent requests — reduces queue wait time in groups
+        self._semaphore = asyncio.Semaphore(3)
+        self._min_request_gap: float = 1.5
         self._last_request_time: float = 0.0
-        self._min_request_gap: float = 4.0
 
+        # Circuit breaker — more lenient thresholds
         self.failure_count = 0
-        self.max_failures = 8
+        self.max_failures = 15
         self.circuit_open = False
         self.circuit_reset_time: Optional[float] = None
+        self._circuit_open_duration: float = 60.0
 
         self.logger.info(f"GeminiClient initialized with model: {self.model}")
 
@@ -28,7 +31,7 @@ class GeminiClient:
         system_prompt: str,
         conversation_history: List[Dict] = None,
         language: str = "en",
-        tone: str = "casual"
+        tone: str = "casual",
     ) -> Optional[str]:
         if self._is_circuit_open():
             self.logger.warning("Circuit breaker open — using local fallback")
@@ -39,13 +42,7 @@ class GeminiClient:
             contents.extend(conversation_history)
         contents.append({"role": "user", "parts": [{"text": message}]})
 
-        language_instruction = (
-            f"\n\nCRITICAL: You MUST respond in the EXACT same language the user wrote in. "
-            f"Detected language code: '{language}'. "
-            f"If they wrote in Hindi, reply in Hindi. If Hinglish, reply in Hinglish. "
-            f"If English, reply in English. This is NON-NEGOTIABLE. Keep response SHORT (1-2 sentences)."
-        )
-        enhanced_system_prompt = system_prompt + language_instruction
+        token_budget = self._estimate_token_budget(message, tone)
 
         async with self._semaphore:
             now = asyncio.get_event_loop().time()
@@ -61,20 +58,19 @@ class GeminiClient:
                     model=self.model,
                     contents=contents,
                     config=types.GenerateContentConfig(
-                        system_instruction=enhanced_system_prompt,
-                        temperature=0.9,
+                        system_instruction=system_prompt,
+                        temperature=0.92,
                         top_p=0.95,
-                        top_k=40,
-                        max_output_tokens=300,
-                        candidate_count=1
-                    )
+                        top_k=64,
+                        max_output_tokens=token_budget,
+                        candidate_count=1,
+                    ),
                 )
 
                 if response and response.text:
                     self.failure_count = 0
                     self.circuit_open = False
-                    self.logger.info("Gemini responded OK")
-                    return self._clean_response(response.text.strip())
+                    return self._clean_response(response.text.strip(), language)
                 else:
                     self.logger.warning("Empty Gemini response")
                     return None
@@ -88,7 +84,7 @@ class GeminiClient:
                 elif "404" in error_str or "NOT_FOUND" in error_str:
                     self.logger.error(
                         f"Gemini model '{self.model}' not found. "
-                        "Check GEMINI_MODEL env var. Using local response."
+                        "Check GEMINI_MODEL in your .env. Using local response."
                     )
                     return None
                 else:
@@ -96,30 +92,50 @@ class GeminiClient:
                     self._handle_failure()
                     return None
 
-    def _clean_response(self, text: str) -> str:
+    def _estimate_token_budget(self, message: str, tone: str) -> int:
+        msg_len = len(message)
+        deep_keywords = [
+            "why", "how", "explain", "what is", "what are", "tell me about",
+            "advice", "help me", "problem", "think", "feel", "sad", "depressed",
+            "code", "error", "fix", "issue", "understand", "relationship",
+            "philosophy", "meaning", "life", "kya", "kaise", "kyun", "batao",
+            "samjhao", "problem hai", "help karo",
+        ]
+        is_deep = (
+            msg_len > 80 or
+            any(kw in message.lower() for kw in deep_keywords) or
+            tone in ("sad", "formal")
+        )
+        return 800 if is_deep else 400
+
+    def _clean_response(self, text: str, language: str = "en") -> str:
         try:
             text = text.replace("**", "").replace("*", "")
+
             ai_phrases = [
                 "I'm an AI", "As an AI", "I'm here to help", "As a language model",
                 "I'm a chatbot", "I'm a bot", "I'm an assistant", "I'm designed to",
                 "My purpose is", "I was created to", "I'm programmed to",
-                "I don't have feelings", "I can't experience", "I lack the capacity"
+                "I don't have feelings", "I can't experience", "I lack the capacity",
+                "How can I assist", "Is there anything else", "I hope this helps",
             ]
             for phrase in ai_phrases:
                 if phrase.lower() in text.lower():
-                    sentences = text.split('. ')
-                    text = '. '.join(s for s in sentences if phrase.lower() not in s.lower())
-            if len(text) > 800:
-                sentences = text.split('. ')
+                    sentences = text.split(". ")
+                    text = ". ".join(s for s in sentences if phrase.lower() not in s.lower())
+
+            if len(text) > 1000:
+                sentences = text.split(". ")
                 truncated, count = [], 0
                 for s in sentences:
-                    if count + len(s) > 600:
+                    if count + len(s) > 900:
                         break
                     truncated.append(s)
                     count += len(s)
-                text = '. '.join(truncated) if truncated else text[:600] + "..."
-                if truncated and not text.endswith('.'):
-                    text += '.'
+                text = ". ".join(truncated) if truncated else text[:900] + "..."
+                if truncated and not text.endswith("."):
+                    text += "."
+
             return text.strip()
         except Exception as e:
             self.logger.error(f"Error cleaning response: {e}")
@@ -129,17 +145,21 @@ class GeminiClient:
         self.failure_count += 1
         if self.failure_count >= self.max_failures:
             self.circuit_open = True
-            self.circuit_reset_time = asyncio.get_event_loop().time() + 90
-            self.logger.warning("Circuit breaker opened. Auto-reset in 90s.")
+            self.circuit_reset_time = asyncio.get_event_loop().time() + self._circuit_open_duration
+            self.logger.warning(
+                f"Circuit breaker opened after {self.failure_count} failures. "
+                f"Auto-reset in {self._circuit_open_duration}s."
+            )
 
     def _is_circuit_open(self) -> bool:
         if not self.circuit_open:
             return False
-        if self.circuit_reset_time and asyncio.get_event_loop().time() > self.circuit_reset_time:
+        now = asyncio.get_event_loop().time()
+        if self.circuit_reset_time and now > self.circuit_reset_time:
             self.circuit_open = False
             self.failure_count = 0
             self.circuit_reset_time = None
-            self.logger.info("Circuit breaker reset")
+            self.logger.info("Circuit breaker reset — resuming Gemini calls")
             return False
         return True
 
@@ -149,7 +169,7 @@ class GeminiClient:
                 self.client.models.generate_content,
                 model=self.model,
                 contents="Hi",
-                config=types.GenerateContentConfig(max_output_tokens=20, temperature=0.1)
+                config=types.GenerateContentConfig(max_output_tokens=20, temperature=0.1),
             )
             return bool(response and response.text)
         except Exception as e:
