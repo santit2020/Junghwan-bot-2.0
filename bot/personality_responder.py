@@ -210,15 +210,56 @@ class PersonalityResponder:
             "Hmm interesting! Abhi main fully process nahi kar pa raha — ek baar phir try kar yaar" if is_hindi else "Hmm! I want to actually think about this properly — try sending again in a moment?",
         ])
 
-    def _general_response(self, tone: str, is_hindi: bool) -> str:
+        def _general_response(self, tone: str, is_hindi: bool) -> str:
         if tone == "excited":
+            if is_hindi:
+                return random.choice([
+                    "Oye! Itni energy kahan se aa rahi hai bata kya hua!",
+                    "Haha waah! Kya chal raha hai??",
+                ])
             return random.choice([
-                "Oye! Itni energy kahan se aa rahi hai 😂 bata kya hua!" if is_hindi else "Haha okay I feel the energy! Tell me more 😄",
-                "Haha waah! Kya chal raha hai?? 🔥" if is_hindi else "Oh wow, you're excited! I like it, what's going on?",
+                "Haha okay I feel the energy! Tell me more",
+                "Oh wow, you're excited! I like it, what's going on?",
             ])
         if tone == "formal":
+            if is_hindi:
+                return random.choice([
+                    "Theek hai, samajh gaya. Aur batao?",
+                    "Haan, sahi keh rahe ho. Aage bolo?",
+                ])
             return random.choice([
-                "Theek hai, samajh gaya. Aur batao?" if is_hindi else "That's an interesting point. What are your thoughts on it?",
-                "Haan, sahi keh rahe ho. Aage bolo?" if is_hindi else "I get what you're saying. Go on?", **...**
-
-_This response is too long to display in full._
+                "That's an interesting point. What are your thoughts on it?",
+                "I get what you're saying. Go on?",
+            ])
+        if tone == "angry":
+            if is_hindi:
+                return random.choice([
+                    "Yaar, relax! Kya hua bata mujhe",
+                    "Ek saans lo! Kya ho gaya? Main sun raha hoon",
+                ])
+            return random.choice([
+                "Whoa, you seem a bit heated what happened?",
+                "Hey, take a breath! What's going on?",
+            ])
+        if is_hindi:
+            return random.choice([
+                "Haha sach mein? aur bata!",
+                "Yaar ye toh interesting hai! Zyada bol",
+                "Oho! Aisa? Phir kya hua?",
+                "Accha accha, theek hai. Suno toh",
+                "Haha bilkul bhi nahi pata tha interesting hai",
+                "Sachchi? Thoda aur detail de yaar",
+                "Hmm... soch raha hoon haan carry on",
+            ])
+        return random.choice([
+            "haha yeah for real what else?",
+            "That's actually interesting ngl! Say more?",
+            "Hmm, true. What do you think about it?",
+            "Oh for real?? That's kinda wild",
+            "Honestly same lol. What's going on with you?",
+            "Yeah no I totally get that. Go on?",
+            "Haha wait what tell me more!",
+            "Okay okay interesting what else?",
+            "Tbh I think you're onto something there",
+            "Ngl that's lowkey fascinating",
+        ])
